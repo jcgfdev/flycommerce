@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: flycommerce
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+api:
+  version: 0.0.1
+  title: Fly Commerce
+  description: Microservicio de gestion de pedidos e-commerce
+  terms: https://

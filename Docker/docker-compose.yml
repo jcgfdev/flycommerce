@@ -1,0 +1,65 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: dbfly
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    volumes:
+      - flydata:/var/lib/mysql
+    networks:
+      - fly-net
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=STRICT_TRANS_TABLES
+      - --innodb-flush-method=fsync
+      - --innodb-use-native-aio=1
+      - --innodb-buffer-pool-size=1G
+      - --skip-name-resolve
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongofly
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - fly-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: kafkafly
+    restart: always
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: ${CLUSTER_ID}
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafkafly:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    networks:
+      - fly-net
+
+volumes:
+  flydata:
+  mongodata:
+  kafkadata:
+
+networks:
+  fly-net:
+    external: true
