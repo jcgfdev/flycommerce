@@ -68,6 +68,8 @@ sonar:
 	  -Dsonar.java.binaries=target/classes \
 	  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
+VERSION := $(shell $(MVN_CMD) help:evaluate -Dexpression=project.version -q -DforceStdout)
+
 sonar-up:
 	docker compose -f Docker/docker-compose.sonar.yml --env-file $(ENV_FILE) --project-name flycommerce up -d
 
@@ -99,10 +101,10 @@ kafka-consumer:
 	docker exec -it kafkafly kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning
 
 build-image:
-	docker build -f Docker/Dockerfile -t flycommerce:dev .
+	docker build --build-arg SKIP_UNIT_TESTS=$(SKIP_UNIT_TESTS) --build-arg SPRING_PROFILE=$(SPRING_PROFILES_ACTIVE) -f Docker/Dockerfile -t flycommerce:$(VERSION) .
 
 run-container:
-	docker run --network fly-net --name flycommerce-container --env-file .env.local -p 1406:1406 -d flycommerce:dev
+	docker run --network fly-net --name flycommerce-container --env-file $(ENV_FILE) -p $(PORT):$(PORT) -d flycommerce:$(VERSION)
 
 stop-container:
 	docker rm -f flycommerce-container || true
