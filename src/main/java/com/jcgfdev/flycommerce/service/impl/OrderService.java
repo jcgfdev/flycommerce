@@ -1,8 +1,13 @@
 package com.jcgfdev.flycommerce.service.impl;
 
+import com.jcgfdev.flycommerce.dto.OrderItemDTO;
 import com.jcgfdev.flycommerce.exception.DataNotFoundException;
+import com.jcgfdev.flycommerce.kafka.event.OrderToPaymentEvent;
+import com.jcgfdev.flycommerce.kafka.producer.OrderEventProducer;
+import com.jcgfdev.flycommerce.mapper.IOrderMapper;
 import com.jcgfdev.flycommerce.model.mongo.Order;
-import com.jcgfdev.flycommerce.model.mongo.OrderItem;
+import com.jcgfdev.flycommerce.payload.request.OrderRequestDTO;
+import com.jcgfdev.flycommerce.payload.response.OrderResponseDTO;
 import com.jcgfdev.flycommerce.repository.mongo.OrderRepository;
 import com.jcgfdev.flycommerce.service.IOrderService;
 import lombok.RequiredArgsConstructor;
@@ -17,44 +22,69 @@ import java.util.List;
 @Slf4j
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final OrderEventProducer orderEventProducer;
+    private final IOrderMapper orderMapper;
 
     @Override
-    public Order createOrder(Order order) {
+    public OrderResponseDTO createOrder(OrderRequestDTO orderRequest) {
+        Order order = orderMapper.toEntity(orderRequest);
         order.setCreatedAt(Instant.now());
         order.setStatus("CREATED");
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        OrderToPaymentEvent event = new OrderToPaymentEvent(
+                savedOrder.getId(),
+                calculateTotal(savedOrder)
+        );
+        orderEventProducer.sendOrderToPayment(event);
+        log.info("Order event sent to OrderToPayment topic: {}", event);
+
+        return orderMapper.toDto(savedOrder);
+    }
+
+    private Double calculateTotal(Order order) {
+        return order.getItems().stream()
+                .mapToDouble(i -> i.getQuantity() * i.getPrice())
+                .sum();
     }
 
     @Override
-    public Order updateOrderItems(String orderId, List<OrderItem> items) {
-        Order order = getOrderById(orderId);
-        order.setItems(items);
-        return orderRepository.save(order);
+    public OrderResponseDTO updateOrderItems(String orderId, List<OrderItemDTO> items) {
+        Order order = getOrderByIdEntity(orderId);
+        order.setItems(items.stream().map(orderMapper::toEntity).toList());
+        return orderMapper.toDto(orderRepository.save(order));
     }
 
     @Override
-    public Order getOrderById(String orderId) {
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+    public OrderResponseDTO getOrderById(String orderId) {
+        return orderMapper.toDto(getOrderByIdEntity(orderId));
     }
 
     @Override
-    public List<Order> getOrdersByCustomer(String customerId) {
-        return orderRepository.findByCustomerId(customerId);
+    public List<OrderResponseDTO> getOrdersByCustomer(String customerId) {
+        return orderRepository.findByCustomerId(customerId).stream()
+                .map(orderMapper::toDto)
+                .toList();
     }
 
     @Override
-    public List<Order> searchOrders(String status, String customerId) {
+    public List<OrderResponseDTO> searchOrders(String status, String customerId) {
         return orderRepository.findAll().stream()
                 .filter(o -> (status == null || o.getStatus().equals(status)) &&
                         (customerId == null || o.getCustomerId().toString().equals(customerId)))
+                .map(orderMapper::toDto)
                 .toList();
     }
 
     @Override
     public void cancelOrder(String orderId) {
-        Order order = getOrderById(orderId);
+        Order order = getOrderByIdEntity(orderId);
         order.setStatus("CANCELLED");
         orderRepository.save(order);
+    }
+
+    private Order getOrderByIdEntity(String orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Order not found"));
     }
 }

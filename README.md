@@ -1,4 +1,3 @@
-
 # flycommerce
 
 `flycommerce` es un microservicio desarrollado en **Java 21** con **Spring Boot 3.4.4**, diseñado para la gestión de pedidos en una plataforma e-commerce. Este servicio implementa una arquitectura híbrida orientada a eventos asíncronos y gestión de datos en bases relacionales y no relacionales.
@@ -98,7 +97,7 @@ make --version
 
 ---
 
-## Estructura del proyecto (hasta ahora)
+## Estructura del proyecto
 
 ```bash
 Docker/
@@ -107,6 +106,26 @@ Docker/
 .env.local
 Makefile
 src/
+└── main/
+    └── java/com/jcgfdev/flycommerce/
+        ├── config/
+        ├── controller/
+        ├── docs/
+        ├── dto/
+        ├── exception/
+        ├── kafka/
+        ├── mapper/
+        ├── model/
+        ├── payload/
+        ├── repository/
+        ├── runner/
+        ├── security/
+        ├── service/
+└── test/
+    └── java/com/jcgfdev/flycommerce/
+        ├── service/impl/
+        ├── mapper/
+        └── ...
 ```
 
 ---

@@ -15,10 +15,9 @@ import java.util.UUID;
 @Document(collection = "orders")
 public class Order {
     @Id
-    private String id; // Mongo id en String
-
-    private UUID customerId; // O String, depende de tu diseño
+    private String id;
+    private UUID customerId;
     private Instant createdAt;
-    private String status; // Podría ser un enum, por simplicidad lo dejamos String
+    private String status;
     private List<OrderItem> items;
 }
