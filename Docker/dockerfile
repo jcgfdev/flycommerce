@@ -1,21 +1,35 @@
 # Etapa 1: Build con Maven y Java 21
 FROM maven:3.9.4-amazoncorretto-21 AS builder
 
+ARG SKIP_UNIT_TESTS=false
+ARG SPRING_PROFILE=dev
+
+ENV SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}
+
 WORKDIR /app
 
+# Copiar proyecto
 COPY pom.xml .
 COPY src ./src
 
-# Build sin tests para la imagen
-RUN mvn clean package -DskipTests
+# Paso 1: Tests unitarios (opcionalmente saltable)
+RUN echo "Ejecutando tests unitarios..." && \
+    if [ "$SKIP_UNIT_TESTS" = "true" ]; then \
+      echo "Saltando unit tests..." && mvn clean package -DskipTests; \
+    else \
+      echo "Corriendo unit tests..." && mvn clean package; \
+    fi
 
-# Etapa 2: Runtime con Amazon Corretto 21
+# Etapa 2: Runtime con Amazon Corretto
 FROM amazoncorretto:21-alpine3.18
 
-ENV SPRING_PROFILES_ACTIVE=dev
+ARG SPRING_PROFILE=dev
+ENV SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}
 
 WORKDIR /app
 
+# Copiamos el JAR generado
 COPY --from=builder /app/target/flycommerce-*.jar app.jar
 
+# Ejecutamos la aplicación
 ENTRYPOINT ["java", "-jar", "app.jar"]
