@@ -1,15 +1,19 @@
 package com.jcgfdev.flycommerce.security.jwt;
 
+import com.jcgfdev.flycommerce.dto.UserDetailsModel;
 import com.jcgfdev.flycommerce.security.model.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Clase responsable de generar y validar JWT.
@@ -44,7 +48,7 @@ public class JwtProvider {
                 .toList();
 
         return Jwts.builder()
-                .setSubject(username) // quien es el usuario
+                .setSubject(username) // quién es el usuario
                 .claim("roles", roleNames) // metemos los roles en el token
                 .setIssuedAt(new Date()) // fecha de creación
                 .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getExpiration())) // expiración

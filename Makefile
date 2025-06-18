@@ -37,6 +37,7 @@ help:
 	@echo "  make mongo                 --> Acceder al shell de MongoDB"
 	@echo "  make kafka-producer        --> Abrir consola producer Kafka"
 	@echo "  make kafka-consumer        --> Abrir consola consumer Kafka"
+	@echo "  make kafka-create-topic TOPIC=nombre			--> crea los topicos para uso de kafka"
 	@echo "  make build-image			--> Buildea la imagen del microservicio"
 	@echo "  make run-container			--> Ejecuta la imagen del microservicio"
 	@echo "  make stop-container		--> Detiene y elimina el contenedor"
@@ -68,17 +69,19 @@ sonar:
 	  -Dsonar.java.binaries=target/classes \
 	  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
+VERSION := $(shell $(MVN_CMD) help:evaluate -Dexpression=project.version -q -DforceStdout)
+
 sonar-up:
 	docker compose -f Docker/docker-compose.sonar.yml --env-file $(ENV_FILE) --project-name flycommerce up -d
 
 sonar-down:
-	docker compose -f Docker/docker-compose.sonar.yml --env-file $(ENV_FILE) --project-name flycommerce down
+	docker compose -f Docker/docker-compose.sonar.yml --env-file $(ENV_FILE) --project-name flycommerce down -v
 
 db-up:
 	docker compose -f Docker/docker-compose.yml --env-file $(ENV_FILE) --project-name flycommerce up -d
 
 db-down:
-	docker compose -f Docker/docker-compose.yml --env-file $(ENV_FILE) --project-name flycommerce down
+	docker compose -f Docker/docker-compose.yml --env-file $(ENV_FILE) --project-name flycommerce down -v
 
 network-create:
 	docker network create fly-net || true
@@ -93,16 +96,19 @@ mongo:
 	docker exec -it mongofly mongosh
 
 kafka-producer:
-	docker exec -it kafkafly kafka-console-producer --broker-list localhost:9092 --topic test-topic
+	docker exec -it kafkafly kafka-console-producer --broker-list localhost:9092 --topic $(TOPIC)
 
 kafka-consumer:
-	docker exec -it kafkafly kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning
+	docker exec -it kafkafly kafka-console-consumer --bootstrap-server localhost:9092 --topic $(TOPIC) --from-beginning
+
+kafka-create-topic:
+	docker exec -it kafkafly kafka-topics --create --topic $(TOPIC) --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 
 build-image:
-	docker build -f Docker/Dockerfile -t flycommerce:dev .
+	docker build --build-arg SKIP_UNIT_TESTS=$(SKIP_UNIT_TESTS) --build-arg SPRING_PROFILE=$(SPRING_PROFILES_ACTIVE) -f Docker/Dockerfile -t flycommerce:$(VERSION) .
 
 run-container:
-	docker run --network fly-net --name flycommerce-container --env-file .env.local -p 1406:1406 -d flycommerce:dev
+	docker run --network fly-net --name flycommerce-container --env-file $(ENV_FILE) -p $(PORT):$(PORT) -d flycommerce:$(VERSION)
 
 stop-container:
 	docker rm -f flycommerce-container || true
