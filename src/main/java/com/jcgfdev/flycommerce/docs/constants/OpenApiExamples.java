@@ -6,55 +6,74 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class OpenApiExamples {
 
-    public static final String EXAMPLE_REGISTER_USER_REQUEST = """
+    public static final String EXAMPLE_USER_CREATED = """
                 {
-                  "username": "juan123",
-                  "password": "Password123!",
-                  "roles": ["USER"]
+                  "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+                  "email": "usuario@example.com",
+                  "firstName": "Juan",
+                  "lastName": "Pérez",
+                  "status": true
                 }
             """;
 
-    public static final String EXAMPLE_AUTH_REQUEST = """
+    public static final String EXAMPLE_USER_CREATED_REQUEST = """
                 {
-                  "username": "juan123",
+                  "firstName": "Juan",
+                  "lastName": "Pérez",
+                  "email": "juan.perez@example.com",
+                  "role": ["user", "sell"],
                   "password": "Password123!"
                 }
             """;
 
-    public static final String EXAMPLE_AUTH_RESPONSE = """
-                {
-                  "username": "juan123",
-                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-                }
-            """;
 
     public static final String EXAMPLE_VALIDATION_ERROR = """
                 {
-                  "timestamp": "2025-06-17T15:00:00",
+                  "timestamp": "2025-04-25T13:30:00",
                   "status": 400,
                   "error": "Bad Request",
-                  "message": "Errores de validacion: {username=No puede ser vacio}",
-                  "path": "/auth/register"
-                }
-            """;
-
-    public static final String EXAMPLE_USER_EXISTS = """
-                {
-                  "timestamp": "2025-06-17T15:00:00",
-                  "status": 410,
-                  "error": "Gone",
-                  "message": "El usuario ya existe",
-                  "path": "/auth/register"
+                  "message": "Errores de validación: {email=Debe ser un correo válido, firstName=No puede ser vacío}",
+                  "path": "/registration/saveUser"
                 }
             """;
 
     public static final String EXAMPLE_UNAUTHORIZED_ERROR = """
                 {
-                  "timestamp": "2025-06-17T15:00:00",
+                  "timestamp": "2025-04-25T14:00:00",
                   "status": 401,
                   "error": "Unauthorized",
-                  "message": "Credenciales invalidas",
-                  "path": "/auth/login"
+                  "message": "No se encontró autenticación en la solicitud",
+                  "path": "/registration/saveUser"
+                }
+            """;
+
+    public static final String EXAMPLE_FORBIDDEN_ERROR = """
+                {
+                  "timestamp": "2025-04-25T14:00:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "Acceso denegado",
+                  "path": "/registration/saveUser"
+                }
+            """;
+
+    public static final String EXAMPLE_ROLE_NOT_FOUND = """
+                {
+                  "timestamp": "2025-04-25T13:30:00",
+                  "status": 404,
+                  "error": "Not Found",
+                  "message": "El rol solicitado no existe",
+                  "path": "/registration/saveUser"
+                }
+            """;
+
+    public static final String EXAMPLE_USER_EXISTS = """
+                {
+                  "timestamp": "2025-04-25T13:30:00",
+                  "status": 410,
+                  "error": "Gone",
+                  "message": "El usuario ya se encuentra registrado",
+                  "path": "/registration/saveUser"
                 }
             """;
 }

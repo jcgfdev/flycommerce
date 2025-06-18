@@ -1,49 +1,64 @@
 package com.jcgfdev.flycommerce.service.impl;
 
-import com.jcgfdev.flycommerce.dto.UserDTO;
-import com.jcgfdev.flycommerce.exception.JwtAuthenticationException;
-import com.jcgfdev.flycommerce.model.User;
-import com.jcgfdev.flycommerce.payload.request.AuthRequest;
-import com.jcgfdev.flycommerce.payload.request.RegisterUserRequest;
-import com.jcgfdev.flycommerce.payload.response.AuthResponse;
+import com.jcgfdev.flycommerce.dto.UsersDTO;
+import com.jcgfdev.flycommerce.exception.DataNotFoundException;
+import com.jcgfdev.flycommerce.payload.request.LoginRequest;
+import com.jcgfdev.flycommerce.payload.response.LoginResponse;
 import com.jcgfdev.flycommerce.security.jwt.JwtProvider;
 import com.jcgfdev.flycommerce.security.model.Role;
 import com.jcgfdev.flycommerce.service.IAuthService;
-import com.jcgfdev.flycommerce.service.IUserService;
+import com.jcgfdev.flycommerce.service.IUsersService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService implements IAuthService {
-    private final IUserService userService;
-    private final JwtProvider jwtProvider;
+    //Seguridad
     private final AuthenticationManager authenticationManager;
+    private final JwtProvider jwtProvider;
+    //servicios
+    private final IUsersService usersService;
+    //mensajes
+    private static final String USERDONTEXISTS = "usuario no existe";
 
     @Override
-    public AuthResponse register(RegisterUserRequest registerUserRequest) {
-        UserDTO userDTO = userService.register(registerUserRequest);
-        String token = jwtProvider.generateToken(userDTO.getUsername(), userDTO.getRoles().stream().map(Role::valueOf).toList());
-        return new AuthResponse(userDTO.getUsername(), token);
-    }
-
-    @Override
-    public AuthResponse login(AuthRequest authRequest) {
+    public LoginResponse login(LoginRequest loginRequest) {
         try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            authRequest.getUsername(),
-                            authRequest.getPassword()
-                    )
+            log.info("Inicio de creacion de sesion");
+            //Verificar existencia de usuario
+            UsersDTO user = Optional.ofNullable(usersService.findByEmail(loginRequest.getUser()))
+                    .orElseThrow(() -> {
+                        log.error("Intento de creacion de usuario: {}", USERDONTEXISTS);
+                        return new DataNotFoundException(USERDONTEXISTS);
+                    });
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUser(), loginRequest.getPassword())
             );
-            User user = userService.findByUsername(authRequest.getUsername());
-            String token = jwtProvider.generateToken(user.getUsername(), user.getRoles());
-            return new AuthResponse(user.getUsername(), token);
-        } catch (AuthenticationException e) {
-            throw new JwtAuthenticationException(e.getMessage());
+            // Establecer el contexto de seguridad
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            var roles = user.getRoles().stream()
+                    .map(Role::valueOf)
+                    .toList();
+            String token = jwtProvider.generateToken(user.getEmail(), roles);
+            LoginResponse loginResponse = new LoginResponse();
+            loginResponse.setUser(user.getEmail());
+            loginResponse.setFirstName(user.getFirstName());
+            loginResponse.setLastName(user.getLastName());
+            loginResponse.setToken(token);
+            log.info("contexto de seguridad creado correctamente, bienvenido mr.{}", user.getLastName());
+            return loginResponse;
+        } catch (Exception e) {
+            log.error("Error durante login: {}", e.getMessage(), e);
+            throw new SecurityException("Error durante login: " + e.getMessage());
         }
     }
 }

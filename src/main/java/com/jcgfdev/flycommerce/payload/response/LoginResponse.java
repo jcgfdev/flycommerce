@@ -1,13 +1,13 @@
 package com.jcgfdev.flycommerce.payload.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-@AllArgsConstructor
-public class AuthResponse {
-    private String username;
+public class LoginResponse {
+    private String user;
+    private String firstName;
+    private String lastName;
     private String token;
 }
